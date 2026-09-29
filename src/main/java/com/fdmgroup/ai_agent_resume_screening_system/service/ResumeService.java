@@ -7,11 +7,19 @@ import java.util.List;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class ResumeService {
+
+    private final VectorStore vectorStore;
+
+    public ResumeService(VectorStore vectorStore) {
+        this.vectorStore = vectorStore;
+    }
 
     public String uploadResume(MultipartFile file) {
 
@@ -25,13 +33,23 @@ public class ResumeService {
 
             List<String> chunks = chunkText(text);
 
+            List<Document> documents =
+                    chunks.stream()
+                            .map(Document::new)
+                            .toList();
+
+            vectorStore.add(documents);
+
             return """
                     Resume uploaded successfully
-                    
+
                     Total Chunks Created: %d
+
+                    Stored In Vector Store Successfully
                     """.formatted(chunks.size());
 
         } catch (IOException e) {
+
             return "Error reading PDF: "
                     + e.getMessage();
         }
